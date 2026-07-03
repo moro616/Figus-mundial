@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FiguSwap · Mundial 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --pitch:#0b1613;        /* fondo: verde cancha de noche */
+    --pitch-2:#122019;
+    --teal:#7fd4c4;         /* dorso de figu Panini */
+    --teal-soft:#a8e6da;
+    --teal-dim:#1e3a33;
+    --red:#e03a2f;          /* el "26" del álbum */
+    --gold:#d4a017;         /* figu repetida / dorada */
+    --gold-soft:#f0c75e;
+    --ink:#0b1613;
+    --paper:#eef7f4;
+    --muted:#6e8b83;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:var(--pitch);
+    color:var(--paper);
+    padding-bottom:84px;
+  }
+  .display{font-family:'Anton',sans-serif;letter-spacing:.02em;text-transform:uppercase}
+
+  /* ---------- header ---------- */
+  header{
+    position:sticky;top:0;z-index:20;
+    background:linear-gradient(180deg,var(--pitch) 75%,transparent);
+    padding:14px 16px 10px;
+  }
+  .brand{display:flex;align-items:baseline;gap:8px}
+  .brand h1{font-size:26px;color:var(--teal)}
+  .brand h1 span{color:var(--red)}
+  .brand small{color:var(--muted);font-weight:600;font-size:11px}
+  .progress{margin-top:10px;background:var(--teal-dim);border-radius:99px;height:22px;position:relative;overflow:hidden}
+  .progress .bar{position:absolute;inset:0;width:0%;background:linear-gradient(90deg,var(--teal),var(--teal-soft));transition:width .4s ease;border-radius:99px}
+  .progress .lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--paper);mix-blend-mode:difference}
+
+  /* ---------- tabs ---------- */
+  nav{
+    position:fixed;bottom:0;left:0;right:0;z-index:30;
+    display:flex;background:var(--pitch-2);
+    border-top:2px solid var(--teal-dim);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  nav button{
+    flex:1;background:none;border:none;color:var(--muted);
+    font-family:'Anton',sans-serif;font-size:14px;letter-spacing:.05em;
+    padding:14px 4px;cursor:pointer;
+  }
+  nav button.on{color:var(--teal)}
+  nav button.on::after{content:"";display:block;width:26px;height:3px;background:var(--red);margin:4px auto 0;border-radius:2px}
+
+  main{padding:4px 12px 24px}
+  .view{display:none}
+  .view.on{display:block}
+
+  /* ---------- album ---------- */
+  .team{margin-bottom:10px;border:1px solid var(--teal-dim);border-radius:12px;overflow:hidden;background:var(--pitch-2)}
+  .team-h{
+    display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;user-select:none;
+  }
+  .team-h .t-name{font-family:'Anton',sans-serif;font-size:15px;letter-spacing:.04em;text-transform:uppercase;flex:1}
+  .team-h .t-stat{font-size:11px;font-weight:600;color:var(--muted)}
+  .team-h .t-stat b{color:var(--teal)}
+  .team-h .t-stat .rp{color:var(--gold)}
+  .team-h .chev{color:var(--muted);transition:transform .2s}
+  .team.open .chev{transform:rotate(90deg)}
+  .grid{display:none;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:7px;padding:0 12px 12px}
+  .team.open .grid{display:grid}
+
+  /* la figu: el elemento firma */
+  .figu{
+    aspect-ratio:3/4;border-radius:6px;position:relative;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Anton',sans-serif;font-size:16px;
+    background:var(--pitch);color:#37524a;
+    border:1.5px dashed #2a4b42;
+    cursor:pointer;user-select:none;
+    transition:transform .08s ease;
+  }
+  .figu:active{transform:scale(.9)}
+  .figu.have{
+    background:linear-gradient(160deg,var(--teal-soft),var(--teal));
+    color:var(--ink);border:1.5px solid var(--teal-soft);
+    box-shadow:0 2px 6px rgba(0,0,0,.4);
+  }
+  .figu.dup{
+    background:linear-gradient(160deg,var(--gold-soft),var(--gold));
+    color:var(--ink);border:1.5px solid var(--gold-soft);
+    box-shadow:0 2px 6px rgba(0,0,0,.5);
+  }
+  .figu.dup::before{ /* segunda figu asomando atrás */
+    content:"";position:absolute;inset:0;border-radius:6px;z-index:-1;
+    background:var(--gold);transform:rotate(6deg) translate(3px,-2px);opacity:.55;
+  }
+  .figu .cnt{
+    position:absolute;top:-6px;right:-6px;
+    background:var(--red);color:#fff;font-size:10px;font-family:'Inter',sans-serif;font-weight:800;
+    min-width:18px;height:18px;border-radius:99px;display:flex;align-items:center;justify-content:center;padding:0 4px;
+  }
+  .hint{color:var(--muted);font-size:12px;text-align:center;margin:10px 0 14px;line-height:1.5}
+  .hint b{color:var(--teal)}
+  .hint .g{color:var(--gold)}
+
+  /* ---------- compartir / código ---------- */
+  .card{background:var(--pitch-2);border:1px solid var(--teal-dim);border-radius:14px;padding:16px;margin-bottom:14px}
+  .card h2{font-size:18px;color:var(--teal);margin-bottom:6px}
+  .card p{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:12px}
+  .btn{
+    display:block;width:100%;border:none;border-radius:10px;padding:14px;
+    font-family:'Anton',sans-serif;font-size:15px;letter-spacing:.05em;text-transform:uppercase;
+    cursor:pointer;margin-bottom:10px;
+  }
+  .btn-t{background:var(--teal);color:var(--ink)}
+  .btn-r{background:var(--red);color:#fff}
+  .btn-o{background:none;border:1.5px solid var(--teal-dim);color:var(--teal)}
+  textarea{
+    width:100%;background:var(--pitch);border:1.5px solid var(--teal-dim);border-radius:10px;
+    color:var(--paper);font-size:12px;padding:10px;min-height:80px;font-family:monospace;resize:vertical;
+  }
+  #qrbox{display:flex;justify-content:center;padding:14px;background:#fff;border-radius:10px;margin-bottom:10px}
+  #qrbox:empty{display:none}
+  .toast{
+    position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);
+    background:var(--teal);color:var(--ink);font-weight:800;font-size:13px;
+    padding:10px 18px;border-radius:99px;opacity:0;pointer-events:none;transition:all .25s;z-index:50;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ---------- match ---------- */
+  .match-head{text-align:center;margin:6px 0 16px}
+  .match-head .vs{font-family:'Anton',sans-serif;font-size:34px;color:var(--red)}
+  .match-head p{color:var(--muted);font-size:12px}
+  .swap-col{margin-bottom:16px}
+  .swap-col h3{
+    font-family:'Anton',sans-serif;font-size:15px;letter-spacing:.05em;text-transform:uppercase;
+    padding:8px 12px;border-radius:8px 8px 0 0;
+  }
+  .swap-col.give h3{background:var(--teal);color:var(--ink)}
+  .swap-col.get h3{background:var(--gold);color:var(--ink)}
+  .swap-list{border:1px solid var(--teal-dim);border-top:none;border-radius:0 0 8px 8px;padding:10px 12px;background:var(--pitch-2)}
+  .swap-sec{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;margin:8px 0 4px}
+  .swap-nums{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{
+    font-family:'Anton',sans-serif;font-size:14px;padding:5px 10px;border-radius:6px;
+  }
+  .give .chip{background:var(--teal-dim);color:var(--teal-soft)}
+  .get .chip{background:#3a2f10;color:var(--gold-soft)}
+  .empty{color:var(--muted);font-size:13px;padding:8px 0}
+  .summary{display:flex;gap:10px;margin-bottom:16px}
+  .summary .box{flex:1;text-align:center;background:var(--pitch-2);border:1px solid var(--teal-dim);border-radius:12px;padding:12px}
+  .summary .n{font-family:'Anton',sans-serif;font-size:30px}
+  .summary .give-n{color:var(--teal)}
+  .summary .get-n{color:var(--gold)}
+  .summary .l{font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:800}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1 class="display">Figu<span>Swap</span></h1>
+    <small>MUNDIAL 2026 · CRUCE AUTOMÁTICO</small>
+  </div>
+  <div class="progress"><div class="bar" id="pbar"></div><div class="lbl" id="plbl"></div></div>
+</header>
+
+<main>
+  <!-- ====== MI ÁLBUM ====== -->
+  <section class="view on" id="v-album">
+    <p class="hint">Tocá una figu: <b>1 toque = la tengo</b> · <span class="g">2 toques = repetida</span> (sigue sumando) · vuelve a faltante al pasar de 5</p>
+    <div id="teams"></div>
+  </section>
+
+  <!-- ====== COMPARTIR ====== -->
+  <section class="view" id="v-share">
+    <div class="card">
+      <h2 class="display">Tu código de cambio</h2>
+      <p>Este código tiene todo tu álbum comprimido. Pasáselo a tu amigo por WhatsApp o mostrale el QR: cuando él lo cargue, la app cruza las listas sola.</p>
+      <button class="btn btn-t" onclick="shareWA()">Mandar por WhatsApp</button>
+      <button class="btn btn-o" onclick="copyCode()">Copiar código</button>
+      <button class="btn btn-o" onclick="showQR()">Mostrar QR</button>
+      <div id="qrbox"></div>
+      <textarea id="mycode" readonly onclick="this.select()"></textarea>
+    </div>
+  </section>
+
+  <!-- ====== CAMBIAR ====== -->
+  <section class="view" id="v-match">
+    <div class="card" id="paste-card">
+      <h2 class="display">Cruzar con un amigo</h2>
+      <p>Pegá acá el código que te mandó (o abrí el link que te compartió) y la app te dice al toque qué figus se pueden cambiar.</p>
+      <textarea id="friendcode" placeholder="FS26.xxxxxxxx..."></textarea>
+      <button class="btn btn-r" style="margin-top:10px" onclick="doMatch()">Cruzar listas</button>
+    </div>
+    <div id="match-result"></div>
+  </section>
+</main>
+
+<nav>
+  <button class="on" data-v="album" onclick="tab('album')">Mi álbum</button>
+  <button data-v="share" onclick="tab('share')">Compartir</button>
+  <button data-v="match" onclick="tab('match')">Cambiar</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   CONFIG DEL ÁLBUM — editá acá si tu álbum numera distinto.
+   Cada sección: nombre + cantidad de figus. Los números se
+   asignan en orden (1, 2, 3...). Total default ≈ 980.
+========================================================= */
+const SECTIONS = [
+  ["Especiales / Intro", 32],
+  ["Argentina",19],["México",19],["Estados Unidos",19],["Canadá",19],
+  ["Brasil",19],["Uruguay",19],["Colombia",19],["Ecuador",19],["Paraguay",19],
+  ["España",19],["Francia",19],["Inglaterra",19],["Alemania",19],
+  ["Países Bajos",19],["Portugal",19],["Bélgica",19],["Croacia",19],
+  ["Suiza",19],["Austria",19],["Noruega",19],["Escocia",19],
+  ["Italia",19],["Turquía",19],["Polonia",19],["Dinamarca",19],
+  ["Marruecos",19],["Senegal",19],["Egipto",19],["Argelia",19],
+  ["Túnez",19],["Costa de Marfil",19],["Ghana",19],["Cabo Verde",19],
+  ["Sudáfrica",19],["Japón",19],["Corea del Sur",19],["Australia",19],
+  ["Irán",19],["Arabia Saudita",19],["Qatar",19],["Uzbekistán",19],
+  ["Jordania",19],["Panamá",19],["Costa Rica",19],["Haití",19],
+  ["Curazao",19],["Nueva Zelanda",19],["Repechaje A",19],["Repechaje B",19],
+  ["Leyendas / Extras", 17]
+];
+const TOTAL = SECTIONS.reduce((a,s)=>a+s[1],0);
+
+/* =========================================================
+   ESTADO — counts[i] = cuántas tenés de la figu i+1 (0..5)
+   Para el cruce solo importa: 0 = te falta, 2+ = tenés repe.
+   >>> Fase Firebase (después): reemplazar loadState/saveState
+   por lecturas/escrituras a Firestore:
+   users/{uid}/album { counts: [...], updatedAt }
+   y el matching server-side queda igual: mismas intersecciones.
+========================================================= */
+let counts = new Uint8Array(TOTAL);
+
+const store = {
+  get(k){ try{ return localStorage.getItem(k) }catch(e){ return store._m?.[k] ?? null } },
+  set(k,v){ try{ localStorage.setItem(k,v) }catch(e){ (store._m??={})[k]=v } }
+};
+function saveState(){ store.set('figuswap26', btoa(String.fromCharCode(...counts))) }
+function loadState(){
+  const raw = store.get('figuswap26');
+  if(!raw) return;
+  try{
+    const arr = atob(raw);
+    for(let i=0;i<Math.min(arr.length,TOTAL);i++) counts[i]=arr.charCodeAt(i);
+  }catch(e){}
+}
+
+/* =========================================================
+   CÓDIGO COMPARTIBLE — 2 bits por figu:
+   0 = falta · 1 = la tengo · 2 = 1 repe · 3 = 2+ repes
+   980 figus ≈ 245 bytes ≈ 330 caracteres en base64url.
+========================================================= */
+function exportCode(){
+  const bytes = new Uint8Array(Math.ceil(TOTAL/4));
+  for(let i=0;i<TOTAL;i++){
+    const st = counts[i]===0?0 : counts[i]===1?1 : counts[i]===2?2:3;
+    bytes[i>>2] |= st << ((i&3)*2);
+  }
+  let b64 = btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  return 'FS26.' + b64;
+}
+function importCode(code){
+  code = (code||'').trim();
+  if(!code.startsWith('FS26.')) return null;
+  try{
+    let b64 = code.slice(5).replace(/-/g,'+').replace(/_/g,'/');
+    while(b64.length%4) b64+='=';
+    const raw = atob(b64);
+    const st = new Uint8Array(TOTAL);
+    for(let i=0;i<TOTAL;i++){
+      const byte = raw.charCodeAt(i>>2) || 0;
+      st[i] = (byte >> ((i&3)*2)) & 3;
+    }
+    return st; // 0 falta, 1 tiene, 2/3 repe
+  }catch(e){ return null }
+}
+
+/* =========================================================
+   EL CRUCE — dos intersecciones y listo:
+   le doy  = mis repes ∩ sus faltantes
+   me da   = sus repes ∩ mis faltantes
+========================================================= */
+function crossLists(friend){
+  const give=[], get=[];
+  for(let i=0;i<TOTAL;i++){
+    if(counts[i]>=2 && friend[i]===0) give.push(i+1);
+    if(friend[i]>=2 && counts[i]===0) get.push(i+1);
+  }
+  return {give,get};
+}
+
+/* ---------- helpers de secciones ---------- */
+const secOf = n => {
+  let acc=0;
+  for(const [name,cnt] of SECTIONS){ if(n<=acc+cnt) return name; acc+=cnt }
+  return '';
+};
+
+/* ---------- UI: álbum ---------- */
+const teamsEl = document.getElementById('teams');
+function buildAlbum(){
+  let num=1, html='';
+  SECTIONS.forEach(([name,cnt],si)=>{
+    html += `<div class="team" data-si="${si}">
+      <div class="team-h" onclick="this.parentNode.classList.toggle('open')">
+        <span class="chev">▶</span>
+        <span class="t-name">${name}</span>
+        <span class="t-stat" id="stat-${si}"></span>
+      </div><div class="grid">`;
+    for(let k=0;k<cnt;k++,num++){
+      html += `<div class="figu" id="f${num}" data-n="${num}" onclick="tap(${num})">${num}</div>`;
+    }
+    html += `</div></div>`;
+  });
+  teamsEl.innerHTML = html;
+  for(let i=1;i<=TOTAL;i++) paint(i);
+  paintStats();
+}
+function tap(n){
+  const i=n-1;
+  counts[i] = (counts[i]+1) % 6; // 0→1→2..5→0
+  paint(n); paintStats(); saveState();
+}
+function paint(n){
+  const el=document.getElementById('f'+n), c=counts[n-1];
+  el.className='figu'+(c===1?' have':c>=2?' dup':'');
+  el.innerHTML = n + (c>=2?`<span class="cnt">+${c-1}</span>`:'');
+}
+function paintStats(){
+  let num=1, have=0, dup=0;
+  SECTIONS.forEach(([name,cnt],si)=>{
+    let h=0,d=0;
+    for(let k=0;k<cnt;k++,num++){ if(counts[num-1]>=1)h++; if(counts[num-1]>=2)d++ }
+    document.getElementById('stat-'+si).innerHTML=`<b>${h}/${cnt}</b>${d?` · <span class="rp">${d} repe</span>`:''}`;
+    have+=h; dup+=d;
+  });
+  const pct = Math.round(have/TOTAL*100);
+  document.getElementById('pbar').style.width=pct+'%';
+  document.getElementById('plbl').textContent=`${have} / ${TOTAL} figus · ${pct}%`;
+}
+
+/* ---------- UI: compartir ---------- */
+function refreshCode(){ document.getElementById('mycode').value = exportCode() }
+function copyCode(){
+  refreshCode();
+  navigator.clipboard?.writeText(exportCode()).then(()=>toast('Código copiado 👌'))
+    .catch(()=>{ document.getElementById('mycode').select(); toast('Seleccionado: copialo manual') });
+}
+function shareWA(){
+  refreshCode();
+  const link = location.origin + location.pathname + '#c=' + exportCode();
+  const msg = `⚽ Che, crucemos las figus del Mundial!\nAbrí este link y la app te dice qué podemos cambiar:\n${link}\n\n(o pegá mi código en FiguSwap)\n${exportCode()}`;
+  window.open('https://wa.me/?text='+encodeURIComponent(msg));
+}
+let qr;
+function showQR(){
+  refreshCode();
+  const box=document.getElementById('qrbox');
+  box.innerHTML='';
+  qr = new QRCode(box,{text:exportCode(),width:220,height:220,correctLevel:QRCode.CorrectLevel.L});
+}
+
+/* ---------- UI: match ---------- */
+function doMatch(codeStr){
+  const code = codeStr || document.getElementById('friendcode').value;
+  const friend = importCode(code);
+  const out = document.getElementById('match-result');
+  if(!friend){ out.innerHTML='<div class="card"><p style="color:var(--red);font-weight:600">Ese código no es válido. Tiene que empezar con FS26.</p></div>'; return }
+  const {give,get} = crossLists(friend);
+  const bySec = list => {
+    const g={};
+    list.forEach(n=>{ const s=secOf(n); (g[s]??=[]).push(n) });
+    return Object.entries(g).map(([s,ns])=>
+      `<div class="swap-sec">${s}</div><div class="swap-nums">${ns.map(n=>`<span class="chip">${n}</span>`).join('')}</div>`
+    ).join('') || '<div class="empty">Nada por acá 😕</div>';
+  };
+  out.innerHTML = `
+    <div class="match-head"><div class="vs display">¡HAY CAMBIO!</div><p>Cruce automático · ${give.length+get.length} figus en juego</p></div>
+    <div class="summary">
+      <div class="box"><div class="n give-n">${give.length}</div><div class="l">Le das</div></div>
+      <div class="box"><div class="n get-n">${get.length}</div><div class="l">Te da</div></div>
+    </div>
+    <div class="swap-col give"><h3>Le das (tus repes que le faltan)</h3><div class="swap-list">${bySec(give)}</div></div>
+    <div class="swap-col get"><h3>Te da (sus repes que te faltan)</h3><div class="swap-list">${bySec(get)}</div></div>`;
+  out.scrollIntoView({behavior:'smooth'});
+}
+
+/* ---------- tabs / toast / init ---------- */
+function tab(v){
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('on'));
+  document.getElementById('v-'+v).classList.add('on');
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  if(v==='share') refreshCode();
+}
+let toastT;
+function toast(m){
+  const t=document.getElementById('toast');
+  t.textContent=m; t.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+loadState();
+buildAlbum();
+
+/* si te abrieron con un link #c=FS26.... entra directo al cruce */
+if(location.hash.startsWith('#c=')){
+  const c = decodeURIComponent(location.hash.slice(3));
+  document.getElementById('friendcode').value = c;
+  tab('match'); doMatch(c);
+}
+</script>
+</body>
+</html>
